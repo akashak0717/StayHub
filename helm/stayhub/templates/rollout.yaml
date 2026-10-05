@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "stayhub.fullname" . }}
+  labels:
+    {{- include "stayhub.labels" . | nindent 4 }}
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  revisionHistoryLimit: 3
+
+  selector:
+    matchLabels:
+      {{- include "stayhub.selectorLabels" . | nindent 6 }}
+
+  strategy:
+    blueGreen:
+      activeService: {{ include "stayhub.fullname" . }}-active
+      previewService: {{ include "stayhub.fullname" . }}-preview
+
+      autoPromotionEnabled: false
+
+      scaleDownDelaySeconds: 30
+
+  template:
+    metadata:
+      labels:
+        {{- include "stayhub.selectorLabels" . | nindent 8 }}
+
+    spec:
+      containers:
+        - name: stayhub
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.container.port }}
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: {{ include "stayhub.fullname" . }}-config
+            - secretRef:
+                name: {{ include "stayhub.fullname" . }}-secret
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

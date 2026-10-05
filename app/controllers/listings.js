@@ -1,0 +1,217 @@
+const Listing = require("../models/listing");
+const axios = require("axios");
+
+module.exports.index = async (req, res) => {
+    let { category, q } = req.query;
+    let filter = {};
+
+    if (category) {
+        filter.category = category;
+    }
+
+    if (q) {
+        filter.$or = [
+            { title: { $regex: q, $options: "i" } },
+            { location: { $regex: q, $options: "i" } },
+            { country: { $regex: q, $options: "i" } }
+        ];
+    }
+
+    const allListings = await Listing.find(filter);
+    res.render("listings/index", { allListings });
+};
+
+
+module.exports.renderNewForm = (req, res) => {
+    res.render('listings/new.ejs');
+};
+
+
+module.exports.showListing = async (req, res) => {
+    let { id } = req.params;
+
+    const mongoose = require("mongoose");
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        req.flash("error", "Invalid listing ID!");
+        return res.redirect("/listings");
+    }
+
+    const listing = await Listing.findById(id)
+        .populate({ path: "reviews", populate: { path: "author" } })
+        .populate("Owner");
+
+    if (!listing) {
+        req.flash("error", "Listing you requested for does not exist!");
+        return res.redirect("/listings");
+    }
+
+    console.log(listing);
+    res.render("listings/show.ejs", { listing });
+};
+
+
+module.exports.createListing = async (req, res) => {
+    try {
+        console.log("BODY =", req.body);
+        console.log("FILE =", req.file);
+
+        if (!req.file) {
+            req.flash("error", "Please select an image!");
+            return res.redirect("/listings/new");
+        }
+
+        const fullLocation = `${req.body.listing.location}, ${req.body.listing.country}`;
+
+        let lat = 28.6139;
+        let lng = 77.2090;
+
+        try {
+            const geoResponse = await axios.get("https://nominatim.openstreetmap.org/search", {
+                params: {
+                    q: fullLocation,
+                    format: "json",
+                    limit: 1
+                },
+                headers: {
+                    "User-Agent": "StayHub/1.0"
+                }
+            });
+
+            if (geoResponse.data.length > 0) {
+                lat = parseFloat(geoResponse.data[0].lat);
+                lng = parseFloat(geoResponse.data[0].lon);
+            }
+        } catch (geoErr) {
+            console.log("Geo Error =", geoErr.message);
+        }
+
+        let url = req.file.path;
+        let filename = req.file.filename;
+
+        console.log("CLOUD URL =", url);
+        console.log("CLOUD FILE =", filename);
+
+        const newListing = new Listing(req.body.listing);
+        newListing.Owner = req.user._id;
+
+        newListing.images = {
+            url: url,
+            filename: filename
+        };
+
+        newListing.geometry = {
+            type: "Point",
+            coordinates: [lng, lat]
+        };
+
+        await newListing.save();
+
+        req.flash("success", "New Listing Created Successfully!");
+        res.redirect(`/listings/${newListing._id}`);
+
+    } catch (err) {
+        console.log("FINAL CREATE ERROR =", err);
+        req.flash("error", err.message);
+        res.redirect("/listings/new");
+    }
+};
+
+
+module.exports.renderEditForm = async (req, res) => {
+    let { id } = req.params;
+    const listing = await Listing.findById(id);
+
+    if (!listing) {
+        req.flash("error", "Listing you requested for does not exist!");
+        return res.redirect("/listings");
+    }
+
+    let originalImageUrl = "";
+
+    if (listing.images && listing.images.url) {
+        originalImageUrl = listing.images.url;
+    }
+
+    res.render("listings/edit", { listing, originalImageUrl });
+};
+
+
+module.exports.updateListing = async (req, res) => {
+    let { id } = req.params;
+    let listing = await Listing.findById(id);
+
+    // store old values FIRST
+    const oldLocation = listing.location;
+    const oldCountry = listing.country;
+
+    const normalize = (str) => (str || "").trim().toLowerCase();
+
+    const locationChanged =
+        normalize(req.body.listing.location) !== normalize(oldLocation);
+
+    const countryChanged =
+        normalize(req.body.listing.country) !== normalize(oldCountry);
+
+    listing.title = req.body.listing.title;
+    listing.description = req.body.listing.description;
+    listing.price = req.body.listing.price;
+    listing.location = req.body.listing.location;
+    listing.country = req.body.listing.country;
+    listing.category = req.body.listing.category;
+
+    if (req.file) {
+        listing.images = {
+            url: req.file.path,
+            filename: req.file.filename
+        };
+    }
+
+    if (locationChanged || countryChanged) {
+        const fullLocation = `${listing.location}, ${listing.country}`;
+
+        try {
+            const geoResponse = await axios.get(
+                "https://nominatim.openstreetmap.org/search",
+                {
+                    params: {
+                        q: fullLocation,
+                        format: "json",
+                        limit: 1
+                    },
+                    headers: {
+                        "User-Agent": "StayHub/1.0"
+                    }
+                }
+            );
+
+            if (geoResponse.data.length > 0) {
+                const lat = parseFloat(geoResponse.data[0].lat);
+                const lng = parseFloat(geoResponse.data[0].lon);
+
+                listing.geometry = {
+                    type: "Point",
+                    coordinates: [lng, lat]
+                };
+
+                console.log("Updated coordinates:", [lng, lat]);
+            }
+        } catch (geoErr) {
+            console.log("Geo Error =", geoErr.message);
+        }
+    }
+
+    await listing.save();
+
+    req.flash("success", "Listing Updated!");
+    res.redirect(`/listings/${id}`);
+};
+
+module.exports.deleteListing = async (req, res) => {
+    let { id } = req.params;
+    let deletedListing = await Listing.findByIdAndDelete(id);
+    console.log(deletedListing);
+    req.flash("success", "Listing deleted!");
+    res.redirect('/listings');
+};
+
+

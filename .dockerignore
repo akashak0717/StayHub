@@ -1,0 +1,13 @@
+app/node_modules
+node_modules
+.env
+app/.env
+.git
+.gitignore
+README.md
+terraform
+ansible
+helm
+argocd
+argocd-rollouts
+monitoring

@@ -1,0 +1,10 @@
+---
+- name: Add Trivy repository
+  get_url:
+    url: https://aquasecurity.github.io/trivy-repo/rpm/releases.repo
+    dest: /etc/yum.repos.d/trivy.repo
+
+- name: Install Trivy
+  dnf:
+    name: trivy
+    state: present

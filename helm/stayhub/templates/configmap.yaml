@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stayhub-config
+  labels:
+    app.kubernetes.io/name: stayhub
+    app.kubernetes.io/instance: stayhub
+data:
+  NODE_ENV: "production"
+  PORT: "8080"

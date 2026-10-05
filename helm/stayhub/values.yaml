@@ -1,0 +1,15 @@
+replicaCount: 2
+
+image:
+  repository: akashak0717/stayhub
+  tag: v2
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8080
+
+container:
+  port: 8080
+
+resources: {}

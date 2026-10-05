@@ -1,0 +1,14 @@
+---
+- name: Update all packages
+  dnf:
+    name: "*"
+    state: latest
+
+- name: Install common packages
+  dnf:
+    name:
+      - java-21-amazon-corretto
+      - git
+      - curl
+      - unzip
+    state: present
