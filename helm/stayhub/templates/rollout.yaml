@@ -19,7 +19,7 @@ spec:
       activeService: {{ include "stayhub.fullname" . }}-active
       previewService: {{ include "stayhub.fullname" . }}-preview
 
-      autoPromotionEnabled: false
+      autoPromotionEnabled: true
 
       scaleDownDelaySeconds: 30
 
