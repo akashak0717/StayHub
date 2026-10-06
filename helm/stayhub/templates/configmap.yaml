@@ -7,4 +7,4 @@ metadata:
     app.kubernetes.io/instance: stayhub
 data:
   NODE_ENV: "production"
-  PORT: "8080"
+  PORT: "8081"
