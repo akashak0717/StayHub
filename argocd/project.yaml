@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: stayhub
+  namespace: argocd
+spec:
+  description: StayHub GitOps Project
+
+  sourceRepos:
+    - https://github.com/akashak0717/StayHub.git
+
+  destinations:
+    - namespace: stayhub
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stayhub
+  namespace: argocd
+spec:
+  project: stayhub
+
+  source:
+    repoURL: https://github.com/akashak0717/StayHub.git
+    targetRevision: main
+    path: helm/stayhub
+
+    helm:
+      releaseName: stayhub
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: stayhub
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
